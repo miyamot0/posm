@@ -1,7 +1,7 @@
 var POSM = POSM || {};
 POSM.Compare = POSM.Compare || {};
 /**
- * Compares two objects one the variable specifed in comparison
+ * Compares two objects on the variable specifed in comparison
  * @param  {object} obj1       The first object to compare
  * @param  {object} obj2       The second object to compare
  * @param  {string} comparison The variable on which to compare the objects
