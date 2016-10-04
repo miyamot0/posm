@@ -9,7 +9,7 @@ POSM.Setting = function(belief) {
    */
   this.dimensions = {};
   /**
-   * The current belief that this setting it just right
+   * The current belief that this setting is just right
    * @type {number}
    */
   this.belief = belief || 1;

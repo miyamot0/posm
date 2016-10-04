@@ -32,19 +32,19 @@ POSM.Compare.settings = function(setting1, setting2) {
     }
   }
   switch (comparisons.length) {
-    case 1:
+    case 1: // there is only one result
       return comparisons[0];
       break;
-    case 2:
+    case 2: // there are two results
       var indexOfEqual = comparisons.indexOf(POSM.EQUAL);
       if (indexOfEqual === -1) {
-        return false
+        return false // neither equal, settings can't be compared
       } else {
-        return comparisons[(indexOfEqual + 1) % 2]
+        return comparisons[(indexOfEqual + 1) % 2] // one equal, return the other
       }
       break;
-    case 3:
-      return false;
+    case 3: // there are three results
+      return false; // settings can't be compared
       break;
   }
 };
