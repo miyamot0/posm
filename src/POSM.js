@@ -1,7 +1,4 @@
 /**
- * DEPRECATED
-**/
-/**
  * Global namespace
  * @type {object}
  */
