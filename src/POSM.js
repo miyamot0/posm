@@ -1,126 +1,97 @@
-/**
- * Global namespace
- * @type {object}
- */
 var POSM = POSM || {};
+
+POSM.TOO_HARD = 1;
+
+POSM.TOO_EASY = 0;
+
+POSM.LEARNING_RATE = 0.75;
+
+POSM.Posm = function() {
+
+};
+
+POSM.Posm.prototype.init = function(name, values) {
+  this[name] = {
+    values: values,
+    belief: []
+  };
+  for (var value in values) {
+    this[name].belief.push(1);
+  }
+  this.current = Math.floor(values.length / 2);
+  return this[name].values[this.current];
+};
+
 /**
- * The default larning rate
- * @type {number}
+ * Posm.prototype.update - finds the just right setting
+ *
+ * @param  {string} name        the name of the variable the settings are for
+ * @param  {string} observation an observation about the diffculty of the current
+ *                              setting
+ * @return {any}             the new setting
  */
-POSM.DEFAULT_LEARNING_RATE = 0.25;
-/**
- * Constant
- * @type {number}
- */
-POSM.MORE_THAN = 1;
-/**
- * Constant
- * @type {number}
- */
-POSM.LESS_THAN = -1;
-/**
- * Constant
- * @type {number}
- */
-POSM.EQUAL = 0;
-/**
- * Constant
- * @type {number}
- */
-POSM.TOO_EASY = 1;
-/**
- * Constant
- * @type {number}
- */
-POSM.TOO_HARD = -1;
-/**
- * Constant
- * @type {number}
- */
-POSM.CORRECT = 0;
-/**
- * Creates a Posm
- * @param  {number} learningRate  This Posm's learning rate (1 > learningRate > 0)
- * @param {[object]} setup        A setup array
- */
-POSM.Posm = function(learningRate, setup) {
-  /**
-   * This posm's learning rate
-   * @type {number}
-   */
-  this.learningRate;
-  /**
-   * This posm's difficulty settings
-   * @type {[POSM.Setting]}
-   */
-  this.settings = [];
-  /**
-   * The index of this posm's current predicted difficulty setting
-   * @type {number}
-   */
-  this.prediction;
-  /**
-  * For each setting, stores the SettingsGroup containing all settings that are
-  * more difficult than it, or equally difficult
-   * @type {[POSM.SettingsGroup]}
-   */
-  this.moreDifficult = [];
-  /**
-   * For each setting, stores the SettingsGroup containing all settings that are
-   * less difficult than it, or equally difficult
-   * @type {[POSM.SettingsGroup]}
-   */
-  this.lessDifficult = [];
-  // validate the learning rate
-  if (1 <= learningRate || learningRate <= 0) {
-    throw new Error('illegal learning rate')
+POSM.Posm.prototype.update = function(name, observation) {
+  // find A (harder) and B (easier) for each setting
+  var harder = [];
+  var easier = [];
+  for (var setting in this[name].values) {
+    // get the total belief of all settings harder than the setting
+    var belief = 0;
+    for (var i = setting; i < this[name].values.length; i++) {
+      belief += this[name].belief[i];
+    }
+    harder[setting] = belief;
+    // get the total belief of all the settings easier than the setting
+    var belief = 0;
+    for (var j = setting; j >= 0; j--) {
+      belief += this[name].belief[j];
+    }
+    easier[setting] = belief;
+  }
+  // for each setting, which (easier or harder) has the LEAST total belief
+  var settings = [];
+  for (var belief in easier) {
+    if (easier[belief] <= harder[belief]) {
+      settings.push(easier[belief]);
+    } else {
+      settings.push(harder[belief]);
+    }
+  }
+  // update the belief with the CURRENT index
+  this.updateBelief(name, observation);
+  // now find which of the settings has the highest belief and update the
+  // current index
+  var maxBelief = Math.max.apply(null, settings);
+  var possibleSettings = [];
+  for (var setting in settings) {
+    if (settings[setting] === maxBelief) {
+      possibleSettings.push(parseInt(setting, 10));
+    }
+  }
+  if (observation = POSM.TOO_HARD) {
+    this.current = possibleSettings[0];
   } else {
-    this.learningRate = learningRate || POSM.DEFAULT_LEARNING_RATE;
+    this.current = possibleSettings[possibleSettings.length - 1];
   }
-  // Set settings
-  if (setup) {
-    this.setSettings(setup);
-  }
-  // Set initial prediction
-  this.predict();
+  return this[name].values[this.current];
 }
+
 /**
- * Predicts an appropriate difficulty Setting
+ * Posm.prototype.updateBelief - updates the belief of as many settings as possible
+ *
+ * @param  {string} name        the variable the setting are for
+ * @param  {string} observation an observation about the difficulty of the setting
  */
-POSM.Posm.prototype.predict = function() {
-  this.moreDifficult = POSM.Get.settingGroups(this.settings, POSM.MORE_THAN);
-  this.lessDifficult = POSM.Get.settingGroups(this.settings, POSM.LESS_THAN);
-  var worstCase = POSM.Get.worstCase(this.moreDifficult, this.lessDifficult);
-  this.prediction = POSM.Get.randomFromArray(POSM.Get.bestCase(worstCase, true));
+POSM.Posm.prototype.updateBelief = function(name, observation) {
+  if (observation === POSM.TOO_HARD) {
+    // update the belief of the current setting, and those more difficult
+    for (var i = this.current; i < this[name].values.length; i++) {
+      this[name].belief[i] *= POSM.LEARNING_RATE;
+    }
+  } else {
+    // update the belief of the current setting, and those less difficult
+    for (var i = this.current; i > -1; i--) {
+      this[name].belief[i] *= POSM.LEARNING_RATE;
+    }
+  }
 }
-/**
- * Updates this posm's beliefs based on the observation
- * @param  {number} observation The observation
- */
-POSM.Posm.prototype.update = function(observation) {
-  switch(observation) {
-    case POSM.TOO_HARD:
-        this.moreDifficult[this.prediction].updateBelief(this.learningRate);
-        break;
-    case POSM.TOO_EASY:
-        this.lessDifficult[this.prediction].updateBelief(this.learningRate);
-        break;
-    default:
-  }
-};
-/**
- * Sets this posm's settings
- * @param  {[object]} setup The setup array
- */
-POSM.Posm.prototype.setSettings = function(setup) {
-  if (setup) {
-    this.settings = POSM.Setup.getSettings(setup);
-  }
-};
-/**
- * Returns the current predicted setting
- * @return {POSM.Setting} The currently predicted setting
- */
-POSM.Posm.prototype.getSetting = function() {
-  return this.settings[this.prediction];
-};
